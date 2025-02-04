@@ -15,13 +15,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# Store the messages
 class State(TypedDict):
     messages: Annotated[list, add_messages]
 
 
+# Create the graph builder
 graph_builder = StateGraph(State)
 
 
+# Define the human assistance tool
 @tool
 def human_assistance(query: str) -> str:
     """Request assistance from a human."""
@@ -29,23 +32,30 @@ def human_assistance(query: str) -> str:
     return human_response["data"]
 
 
+# Define the tools
 tool = TavilySearchResults(max_results=2)
 tools = [tool, human_assistance]
+
+# Define the LLM
 llm = ChatAnthropic(model="claude-3-5-sonnet-20240620")
 llm_with_tools = llm.bind_tools(tools)
 
 
+# Define the chatbot function
 def chatbot(state: State):
     message = llm_with_tools.invoke(state["messages"])
     assert len(message.tool_calls) <= 1
     return {"messages": [message]}
 
 
+# Add the chatbot node
 graph_builder.add_node("chatbot", chatbot)
 
+# Add the tool node
 tool_node = ToolNode(tools=tools)
 graph_builder.add_node("tools", tool_node)
 
+# Add the conditional edges
 graph_builder.add_conditional_edges(
     "chatbot",
     tools_condition,
@@ -53,7 +63,10 @@ graph_builder.add_conditional_edges(
 graph_builder.add_edge("tools", "chatbot")
 graph_builder.add_edge(START, "chatbot")
 
+# Add the memory to save chat history
 memory = MemorySaver()
+
+# Compile the graph
 graph = graph_builder.compile(checkpointer=memory)
 
 
@@ -66,6 +79,7 @@ except Exception:
     pass
 
 
+# Stream the graph updates
 def stream_graph_updates(user_input: str):
     config = {"configurable": {"thread_id": "1"}}
     events = graph.stream(
