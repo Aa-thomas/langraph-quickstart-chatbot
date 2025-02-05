@@ -70,15 +70,6 @@ memory = MemorySaver()
 graph = graph_builder.compile(checkpointer=memory)
 
 
-# Visualization (optional)
-try:
-    from IPython.display import display, Image
-
-    display(Image(graph.get_graph().draw_mermaid_png()))
-except Exception:
-    pass
-
-
 # Stream the graph updates
 def stream_graph_updates(user_input: str):
     config = {"configurable": {"thread_id": "1"}}
